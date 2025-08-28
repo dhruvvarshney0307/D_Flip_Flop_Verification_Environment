@@ -1,35 +1,28 @@
 class driver;
-  
-  transaction tr;
-  mailbox #(transaction) mbx;
-  virtual dff_if vif;
-  
-  function new(mailbox #(transaction) mbx, virtual dff_if vif);
-    this.mbx = mbx;
-    
-    if (vif == null) begin
-      $fatal(1, "[DRV] Virtual interface handle is null. Driver cannot operate.");
-    end
-    this.vif = vif;
+  transaction tr;                  // Define a transaction object
+  mailbox #(transaction) mbx;       // Create a mailbox to receive data from the generator
+  virtual dff_if vif;              // virtual interface for DUT
+
+  function new(mailbox #(transaction) mbx);
+    this.mbx = mbx;                // Initialize the mailbox for receiving data
   endfunction
-  
+
   task reset();
-    vif.rst <= 1'b1;
-    repeat(5) @(posedge vif.clk);
-    vif.rst <= 1'b0;
-    vif.din <= 1'b0;
-    @(posedge vif.clk);
-    $display("[DRV] Reset Done");
+    vif.rst <= 1'b1;               // Assert reset signal
+    repeat(5) @(posedge vif.clk);  // wait for 5 clock cycles
+    vif.rst <= 1'b0;               // Deassert reset signal
+    @(posedge vif.clk);            // wait for one more clock cycle
+    $display("[DRV] : RESET DONE"); // Display reset completion message
   endtask
-  
+
   task run();
     forever begin
-      mbx.get(tr);
-      $display("[DRV] Got transaction: din=%b", tr.din);
-
-      vif.din <= tr.din;
-      @(posedge vif.clk);
+      mbx.get(tr);                 // Get a transaction from the generator
+      vif.din <= tr.din;           // Set DUT input from the transaction
+      @(posedge vif.clk);          // wait for the rising edge of the clock
+      tr.display("DRV");
+      vif.din <= 1'b0;             // Set DUT input to 0
+      @(posedge vif.clk);          // wait for the rising edge of the clock
     end
   endtask
-  
 endclass
